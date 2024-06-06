@@ -30,3 +30,6 @@
 *.exe
 *.out
 *.app
+.idea/Assignment_2.iml
+.idea/modules.xml
+.idea/vcs.xml
