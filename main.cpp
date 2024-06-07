@@ -6,6 +6,41 @@
 
 using namespace std;
 
+class Buffer {
+private:
+    char* buffer;
+    int bufferSize;
+    int bufferLen;
+
+public:
+//constructor
+    Buffer() {
+        bufferSize = 10;
+        bufferLen = 0;
+        buffer = (char*)calloc(bufferSize, sizeof(char));
+    }
+
+    //destructor
+    ~Buffer() {
+        free(buffer);
+        buffer = nullptr;
+    }
+
+    void store(char* text, int symbols) {
+        if (symbols >= bufferSize) {
+            bufferSize = symbols*2;
+            buffer = (char*)realloc(buffer, bufferSize * sizeof(char));
+        }
+        strncpy(buffer, text, symbols); //copy characters from string
+        buffer[symbols] = '\0';
+        bufferLen = symbols;
+    }
+
+    char * getFromBuffer() {
+    return buffer;
+}
+};
+
 class Text {
 private:
     char* text;
@@ -13,6 +48,7 @@ private:
     int textLen;
     stack<char*> stackUndo;
     stack<char*> stackRedo;
+    Buffer buffer;
 
 public:
     //constructor
@@ -210,7 +246,8 @@ public:
             if (text[i] == '\n') {
                 line++;
                 column = 0;
-            } else {
+            }
+            else {
                 column++;
             }
             i++;
@@ -361,8 +398,48 @@ public:
 
             strcpy(text, previousState);
             cout << "Last operation was redone\n";
-        } else {
+        }
+        else {
             cout << "There are no operations to redo\n";
+        }
+    }
+
+    void cut() {
+        int line, column, symbols;
+        cout << "Enter line, column, and number of symbols separated by spaces:\n";
+        cin >> line >> column >> symbols;
+        cin.ignore(numeric_limits<streamsize>::max(), '\n'); // clear the input buffer
+
+        int cutLine = 0;
+        int cutColumn = 0;
+        int cutIndex = 0;
+        int i = 0;
+
+        while (text[i] != '\0') {
+            if (cutLine == line && cutColumn == column) {
+                cutIndex = i;
+                break;
+            }
+            if (text[i] == '\n') {
+                cutLine++;
+                cutColumn = 0;
+            }
+            else {
+                cutColumn++;
+            }
+            i++;
+        }
+        if (cutIndex + symbols <= textLen) {
+            buffer.store(&text[cutIndex], symbols);
+
+            memmove(&text[cutIndex], &text[cutIndex + symbols], (textLen - cutIndex - symbols) + 1);
+            textLen -= symbols;
+
+            cout << "Cut text: " << buffer.getFromBuffer() << "\n";
+            saveState();
+        }
+        else {
+            cout << "Cut operation is out of bounds\n";
         }
     }
 };
@@ -372,7 +449,7 @@ int main() {
     Text text; // destructor will be called when main() ends
 
     while (true) {
-        cout << "\nChoose the command (1/2/3/4/5/6/7/8/9/undo/redo/exit):";
+        cout << "\nChoose the command (1/2/3/4/5/6/7/8/9/undo/redo/cut/exit):";
         char command[10];
         fgets(command, sizeof(command), stdin);
         command[strcspn(command, "\n")] = '\0';
@@ -386,6 +463,9 @@ int main() {
         }
         else if (strcmp(command, "redo") == 0) {
             text.redo();
+        }
+        else if (strcmp(command, "cut") == 0) {
+            text.cut();
         }
         else {
             switch (command[0]) {
