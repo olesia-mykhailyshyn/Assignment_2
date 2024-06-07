@@ -82,6 +82,26 @@ public:
         stackUndo.push(currentText);
     }
 
+    int findIndex(int line, int column) {
+        int index = 0;
+        int currentLine = 0;
+        int currentColumn = 0;
+
+        while (text[index] != '\0') {
+            if (currentLine == line && currentColumn == column) {
+                return index;
+            }
+            if (text[index] == '\n') {
+                currentLine++;
+                currentColumn = 0;
+            } else {
+                currentColumn++;
+            }
+            index++;
+        }
+        return -1;
+    }
+
     void appendText() {
         cout << "Enter text to append:\n";
         int inputLen = 0;
@@ -281,25 +301,7 @@ public:
             text = (char *)realloc(text, textSize * sizeof(char));
         }
 
-        int insertionLine = 0;
-        int insertionColumn = 0;
-        int insertIndex = 0;
-        i = 0;
-
-        while (text[i] != '\0') {
-            if (insertionLine == lineNumber && insertionColumn == columnNumber) {   //insert to the very end
-                insertIndex = i;
-                break;
-            }
-            if (text[i] == '\n') {
-                insertionLine++;
-                insertionColumn = 0;
-            }
-            else {
-                insertionColumn++;
-            }
-            i++;
-        }
+        int insertIndex = findIndex(line, column);
 
         // shift text to make room for the new text
         memmove(&text[insertIndex + inputLen], &text[insertIndex], (textLen - insertIndex) + 1);
@@ -332,25 +334,7 @@ public:
         getline(cin, amountInput);
         int amount = stoi(amountInput);
 
-        int deletionLine = 0;
-        int deletionColumn = 0;
-        int deleteIndex = 0;
-        int i = 0;
-
-        while (text[i] != '\0') {
-            if (deletionLine == line && deletionColumn == column) {
-                deleteIndex = i;
-                break;
-            }
-            if (text[i] == '\n') {
-                deletionLine++;
-                deletionColumn = 0;
-            }
-            else {
-                deletionColumn++;
-            }
-            i++;
-        }
+        int deleteIndex = findIndex(line,column);
 
         if (deleteIndex + amount <= textLen) {
             //               to                        from                         number bytes
@@ -410,25 +394,8 @@ public:
         cin >> line >> column >> symbols;
         cin.ignore(numeric_limits<streamsize>::max(), '\n'); // clear the input buffer
 
-        int cutLine = 0;
-        int cutColumn = 0;
-        int cutIndex = 0;
-        int i = 0;
+        int cutIndex = findIndex(line, column);
 
-        while (text[i] != '\0') {
-            if (cutLine == line && cutColumn == column) {
-                cutIndex = i;
-                break;
-            }
-            if (text[i] == '\n') {
-                cutLine++;
-                cutColumn = 0;
-            }
-            else {
-                cutColumn++;
-            }
-            i++;
-        }
         if (cutIndex + symbols <= textLen) {
             buffer.store(&text[cutIndex], symbols);
 
@@ -442,6 +409,73 @@ public:
             cout << "Cut operation is out of bounds\n";
         }
     }
+
+    void paste() {
+        if (strlen(buffer.getFromBuffer()) == 0) {
+            cout << "Buffer is empty. Nothing to paste\n";
+            return;
+        }
+
+        int line, column;
+        cout << "Enter line and column separated by spaces:\n";
+        cin >> line >> column;
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
+        int pasteLine = 0;
+        int pasteColumn = 0;
+        int pasteIndex = 0;
+        int i = 0;
+
+        while (text[i] != '\0') {
+            if (pasteLine == line && pasteColumn == column) {
+                pasteIndex = i;
+                break;
+            }
+            if (text[i] == '\n') {
+                pasteLine++;
+                pasteColumn = 0;
+            } else {
+                pasteColumn++;
+            }
+            i++;
+        }
+
+        if (text[i] == '\0' && pasteLine == line && pasteColumn == column) {
+            pasteIndex = i;
+        }
+
+        int bufferLength = strlen(buffer.getFromBuffer());
+
+        if (pasteIndex <= textLen) {
+            memmove(&text[pasteIndex + bufferLength], &text[pasteIndex], textLen - pasteIndex + 1);
+
+            strncpy(&text[pasteIndex], buffer.getFromBuffer(), bufferLength);
+            textLen += bufferLength;
+
+            cout << "Pasted text: " << buffer.getFromBuffer() << "\n";
+            saveState();
+        }
+        else {
+            cout << "Paste operation is out of bounds\n";
+        }
+    }
+
+    void copy() {
+        int line, column, symbols;
+        cout << "Enter line, column, and number of symbols separated by spaces:\n";
+        cin >> line >> column >> symbols;
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
+        int copyIndex = findIndex(line, column);
+
+        if (copyIndex + symbols <= textLen) {
+            buffer.store(&text[copyIndex], symbols);
+            cout << "Copied text: " << buffer.getFromBuffer() << "\n";
+        }
+        else {
+            cout << "Copy operation is out of bounds\n";
+        }
+    }
 };
 
 int main() {
@@ -449,7 +483,7 @@ int main() {
     Text text; // destructor will be called when main() ends
 
     while (true) {
-        cout << "\nChoose the command (1/2/3/4/5/6/7/8/9/undo/redo/cut/exit):";
+        cout << "\nChoose the command (1/2/3/4/5/6/7/8/9/undo/redo/cut/paste/copy/exit):";
         char command[10];
         fgets(command, sizeof(command), stdin);
         command[strcspn(command, "\n")] = '\0';
@@ -466,6 +500,12 @@ int main() {
         }
         else if (strcmp(command, "cut") == 0) {
             text.cut();
+        }
+        else if (strcmp(command, "paste") == 0) {
+            text.paste();
+            }
+        else if (strcmp(command, "copy") == 0) {
+            text.copy();
         }
         else {
             switch (command[0]) {
