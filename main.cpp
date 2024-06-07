@@ -2,13 +2,16 @@
 #include <cstring>
 #include <unistd.h>
 #include <limits>
+#include <stack>
+
 using namespace std;
 
 class Text {
 private:
     char* text;
-    int textLen;
     int textSize;
+    int textLen;
+    stack<char*> stack;
 
 public:
     //constructor
@@ -16,15 +19,28 @@ public:
         textSize = 10;
         textLen = 0;
         text = (char*)calloc(textSize, sizeof(char));
+        saveState();
     }
 
     //destructor
     ~Text() {
         free(text);
         text = nullptr;
+
+        while(!stack.empty()) {
+            free(stack.top());
+            stack.pop();
+        }
     }
 
     //methods
+    void saveState() {
+        char* currentText = (char*)calloc(textLen + 1, sizeof(char));
+        // to      from
+        strcpy(currentText, text);
+        stack.push(currentText);
+    }
+
     void appendText() {
         cout << "Enter text to append:\n";
         int inputLen = 0;
@@ -50,6 +66,7 @@ public:
 
         free(input);
         input = nullptr;
+        saveState();
     }
 
     void startNewLine () {
@@ -62,6 +79,7 @@ public:
         textLen++;
 
         cout << "New line is started\n";
+        saveState();
     }
 
     void saveTextToFile () {
@@ -84,6 +102,7 @@ public:
         else {
             cout << "Error opening file " << fileName << ". There is no such file in your PC.\n";
         }
+        //saveState();
     }
 
     void loadTextFromFile() {
@@ -121,6 +140,7 @@ public:
         else {
             cout << "Error opening file " << fileName << ". There is no such file in your PC.\n";
         }
+        saveState();
     }
 
     void printText() {
@@ -249,6 +269,78 @@ public:
         //кількість байтів, які потрібно скопіювати з input у text. це довжина нового тексту, який ми вставляємо
 
         textLen += inputLen;
+        saveState();
+    }
+
+    void deleteText() {
+        cout << "Deleting...\n";
+
+        cout << "Choose line:\n";
+        string lineInput;
+        getline(cin, lineInput);
+        int line = stoi(lineInput);
+
+        cout << "Choose column:\n";
+        string columnInput;
+        getline(cin, columnInput);
+        int column = stoi(columnInput);
+
+        cout << "Choose amount of symbols:\n";
+        string amountInput;
+        getline(cin, amountInput);
+        int amount = stoi(amountInput);
+
+        int deletionLine = 0;
+        int deletionColumn = 0;
+        int deleteIndex = 0;
+        int i = 0;
+
+        while (text[i] != '\0') {
+            if (deletionLine == line && deletionColumn == column) {
+                deleteIndex = i;
+                break;
+            }
+            if (text[i] == '\n') {
+                deletionLine++;
+                deletionColumn = 0;
+            }
+            else {
+                deletionColumn++;
+            }
+            i++;
+        }
+
+        if (deleteIndex + amount <= textLen) {
+            //               to                        from                         number bytes
+            memmove(&text[deleteIndex], &text[deleteIndex + amount], (textLen - amount));
+            textLen -= amount;
+            cout << "\nDeleting process was executed successfully\n";
+        }
+        else {
+            cout << "\nDeleting process was not executed successfully\n";
+            cout << "You were outside of bound\n";
+        }
+        saveState();
+    }
+
+    void undo() {
+        if (stack.size() > 1) {
+            free(stack.top());
+            stack.pop();
+
+            if (!stack.empty()) {
+                char* previousState = stack.top();
+                textLen = strlen(previousState);
+                textSize = textLen;
+                text = (char*)realloc(text, textSize + 1);
+
+                strcpy(text, previousState);
+                cout << "Last operation was undone\n";
+            }
+        }
+        else {
+            cout << "There are no operations to undo\n";
+        }
     }
 };
 
@@ -257,43 +349,51 @@ int main() {
     Text text; // destructor will be called when main() ends
 
     while (true) {
-        cout << "\nChoose the command (1/2/3/4/5/6/7/8/exit):";
-        string command;
-        getline(cin, command); // read entire line of input
+        cout << "\nChoose the command (1/2/3/4/5/6/7/8/9/undo/exit):";
+        char command[10];
+        fgets(command, sizeof(command), stdin);
+        command[strcspn(command, "\n")] = '\0';
 
-        if (command == "exit") {
-            cout << "\nProgram was cancelled\n";
+        if (strcmp(command, "exit") == 0) {
+            cout << "Program was cancelled\n";
             break;
         }
-
-        switch (command[0]) {
-            case '1':
-                text.appendText();
-                break;
-            case '2':
-                text.startNewLine();
-                break;
-            case '3':
-                text.saveTextToFile();
-                break;
-            case '4':
-                text.loadTextFromFile();
-                break;
-            case '5':
-                text.printText();
-                break;
-            case '6':
-                text.searchPosition();
-                break;
-            case '7':
-                text.appendByCoordinate();
-                break;
-            case '8':
-                text.clearConsole();
-                break;
-            default:
-                cout << "\nInvalid command\n";
-                break;
+        else if (strcmp(command, "undo") == 0) {
+            text.undo();
+        }
+        else {
+            switch (command[0]) {
+                case '1':
+                    text.appendText();
+                    break;
+                case '2':
+                    text.startNewLine();
+                    break;
+                case '3':
+                    text.saveTextToFile();
+                    break;
+                case '4':
+                    text.loadTextFromFile();
+                    break;
+                case '5':
+                    text.printText();
+                    break;
+                case '6':
+                    text.searchPosition();
+                    break;
+                case '7':
+                    text.appendByCoordinate();
+                    break;
+                case '8':
+                    text.clearConsole();
+                    break;
+                case '9':
+                    text.deleteText();
+                    break;
+                default:
+                    cout << "Invalid command\n";
+                    break;
+            }
         }
     }
 
