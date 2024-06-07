@@ -11,7 +11,8 @@ private:
     char* text;
     int textSize;
     int textLen;
-    stack<char*> stack;
+    stack<char*> stackUndo;
+    stack<char*> stackRedo;
 
 public:
     //constructor
@@ -27,9 +28,13 @@ public:
         free(text);
         text = nullptr;
 
-        while(!stack.empty()) {
-            free(stack.top());
-            stack.pop();
+        while(!stackUndo.empty()) {
+            free(stackUndo.top());
+            stackUndo.pop();
+        }
+        while(!stackRedo.empty()) {
+            free(stackRedo.top());
+            stackRedo.pop();
         }
     }
 
@@ -38,7 +43,7 @@ public:
         char* currentText = (char*)calloc(textLen + 1, sizeof(char));
         // to      from
         strcpy(currentText, text);
-        stack.push(currentText);
+        stackUndo.push(currentText);
     }
 
     void appendText() {
@@ -324,12 +329,12 @@ public:
     }
 
     void undo() {
-        if (stack.size() > 1) {
-            free(stack.top());
-            stack.pop();
+        if (stackUndo.size() > 1) {
+            stackRedo.push(stackUndo.top());
+            stackUndo.pop();
 
-            if (!stack.empty()) {
-                char* previousState = stack.top();
+            if (!stackUndo.empty()) {
+                char* previousState = stackUndo.top();
                 textLen = strlen(previousState);
                 textSize = textLen;
                 text = (char*)realloc(text, textSize + 1);
@@ -341,6 +346,24 @@ public:
         else {
             cout << "There are no operations to undo\n";
         }
+
+    }
+
+    void redo() {
+        if (!stackRedo.empty()) {
+            stackUndo.push(stackRedo.top());
+            stackRedo.pop();
+
+            char* previousState = stackUndo.top();
+            textLen = strlen(previousState);
+            textSize = textLen;
+            text = (char*)realloc(text, textSize + 1);
+
+            strcpy(text, previousState);
+            cout << "Last operation was redone\n";
+        } else {
+            cout << "There are no operations to redo\n";
+        }
     }
 };
 
@@ -349,7 +372,7 @@ int main() {
     Text text; // destructor will be called when main() ends
 
     while (true) {
-        cout << "\nChoose the command (1/2/3/4/5/6/7/8/9/undo/exit):";
+        cout << "\nChoose the command (1/2/3/4/5/6/7/8/9/undo/redo/exit):";
         char command[10];
         fgets(command, sizeof(command), stdin);
         command[strcspn(command, "\n")] = '\0';
@@ -360,6 +383,9 @@ int main() {
         }
         else if (strcmp(command, "undo") == 0) {
             text.undo();
+        }
+        else if (strcmp(command, "redo") == 0) {
+            text.redo();
         }
         else {
             switch (command[0]) {
