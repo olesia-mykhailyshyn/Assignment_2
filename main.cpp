@@ -83,7 +83,7 @@ public:
     }
 
     int findIndex(int line, int column) {
-        int index = 0;
+        int index = -1;
         int currentLine = 0;
         int currentColumn = 0;
 
@@ -287,8 +287,8 @@ public:
         fgets(columnNumberInput, sizeof(columnNumberInput), stdin);
         lineNumberInput[strcspn(lineNumberInput, "\n")] = '\0';
 
-        int lineNumber = stoi(lineNumberInput); //atoi -- convert str to int
-        int columnNumber = stoi(columnNumberInput);
+        //int lineNumber = stoi(lineNumberInput); //atoi -- convert str to int
+        //int columnNumber = stoi(columnNumberInput);
 
         char input[30];
         cout << "Enter text you want to add:\n";
@@ -476,6 +476,38 @@ public:
             cout << "Copy operation is out of bounds\n";
         }
     }
+
+    void insert() {
+        int line, column;
+        cout << "Enter line and column separated by spaces:\n";
+        cin >> line >> column;
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
+        string input;
+        cout << "Enter text to insert:\n";
+        getline(cin, input);
+
+        int insertIndex = findIndex(line, column) + 1;
+        int inputLen = input.length();
+
+        if (insertIndex >= textLen) {
+            // if out of bond -> insert in the end
+            // strcat(), memcpy() etc. work witc c_str()
+            strcat(text, input.c_str());
+        }
+        else {
+            if (textLen + inputLen >= textSize) {
+                textSize = textLen + inputLen + 1;
+                text = (char *)realloc(text, textSize * sizeof(char));
+            }
+            memcpy(&text[insertIndex], input.c_str(), inputLen);
+        }
+
+        textLen += inputLen;
+
+        saveState();
+        cout << "Text inserted and replaced successfully.\n";
+    }
 };
 
 int main() {
@@ -483,7 +515,7 @@ int main() {
     Text text; // destructor will be called when main() ends
 
     while (true) {
-        cout << "\nChoose the command (1/2/3/4/5/6/7/8/9/undo/redo/cut/paste/copy/exit):";
+        cout << "\nChoose the command (1/2/3/4/5/6/7/8/9/undo/redo/cut/paste/copy/insert/exit):";
         char command[10];
         fgets(command, sizeof(command), stdin);
         command[strcspn(command, "\n")] = '\0';
@@ -507,6 +539,9 @@ int main() {
         else if (strcmp(command, "copy") == 0) {
             text.copy();
         }
+        else if (strcmp(command, "insert") == 0) {
+            text.insert();
+        }
         else {
             switch (command[0]) {
                 case '1':
@@ -525,10 +560,10 @@ int main() {
                     text.printText();
                     break;
                 case '6':
-                    text.searchPosition();
+                    text.appendByCoordinate();
                     break;
                 case '7':
-                    text.appendByCoordinate();
+                    text.searchPosition();
                     break;
                 case '8':
                     text.clearConsole();
