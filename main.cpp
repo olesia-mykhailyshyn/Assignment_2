@@ -383,7 +383,7 @@ public:
         saveState();
     }
 
-    void undo() {
+    void undo() { //максимальний відкат до найпершого стану
         if (stackUndo.size() > 1) {
             stackRedo.push(stackUndo.top());
             stackUndo.pop();
@@ -430,7 +430,10 @@ public:
 
         int cutIndex = findIndex(line, column);
 
-        if (cutIndex + symbols <= textLen) {
+        if (cutIndex == -1 || cutIndex >= textLen || cutIndex + symbols > textLen) {
+            cout << "Cut operation is out of bound\n";
+        }
+        else {
             buffer.store(&text[cutIndex], symbols);
 
             memmove(&text[cutIndex], &text[cutIndex + symbols], (textLen - cutIndex - symbols) + 1);
@@ -438,9 +441,6 @@ public:
 
             cout << "Cut text: " << buffer.getFromBuffer() << "\n";
             saveState();
-        }
-        else {
-            cout << "Cut operation is out of bounds\n";
         }
     }
 
@@ -455,43 +455,25 @@ public:
         cin >> line >> column;
         cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
-        int pasteLine = 0;
-        int pasteColumn = 0;
-        int pasteIndex = 0;
-        int i = 0;
+        int pasteIndex = findIndex(line, column);
 
-        while (text[i] != '\0') {
-            if (pasteLine == line && pasteColumn == column) {
-                pasteIndex = i;
-                break;
-            }
-            if (text[i] == '\n') {
-                pasteLine++;
-                pasteColumn = 0;
-            } else {
-                pasteColumn++;
-            }
-            i++;
-        }
-
-        if (text[i] == '\0' && pasteLine == line && pasteColumn == column) {
-            pasteIndex = i;
+        if (pasteIndex == -1 || pasteIndex > textLen) {
+            cout << "Paste operation is out of bound\n";
+            return;
         }
 
         int bufferLength = strlen(buffer.getFromBuffer());
 
-        if (pasteIndex <= textLen) {
-            memmove(&text[pasteIndex + bufferLength], &text[pasteIndex], textLen - pasteIndex + 1);
-
-            strncpy(&text[pasteIndex], buffer.getFromBuffer(), bufferLength);
-            textLen += bufferLength;
-
-            cout << "Pasted text: " << buffer.getFromBuffer() << "\n";
-            saveState();
+        if (textLen + bufferLength >= textSize) {
+            textSize = (textLen + bufferLength) * 2;
+            text = (char *)realloc(text, textSize * sizeof(char));
         }
-        else {
-            cout << "Paste operation is out of bounds\n";
-        }
+
+        memmove(&text[pasteIndex + bufferLength], &text[pasteIndex], textLen - pasteIndex + 1);
+        strncpy(&text[pasteIndex], buffer.getFromBuffer(), bufferLength);
+        textLen += bufferLength;
+
+        cout << "Pasted text: " << buffer.getFromBuffer() << "\n";
         saveState();
     }
 
@@ -503,12 +485,12 @@ public:
 
         int copyIndex = findIndex(line, column);
 
-        if (copyIndex + symbols <= textLen) {
-            buffer.store(&text[copyIndex], symbols);
-            cout << "Copied text: " << buffer.getFromBuffer() << "\n";
+        if (copyIndex == -1 || copyIndex >= textLen || copyIndex + symbols > textLen) {
+            cout << "Copy operation is out of bound\n";
         }
         else {
-            cout << "Copy operation is out of bounds\n";
+            buffer.store(&text[copyIndex], symbols);
+            cout << "Copied text: " << buffer.getFromBuffer() << "\n";
         }
     }
 
@@ -525,23 +507,23 @@ public:
         int insertIndex = findIndex(line, column); //+1
         int inputLen = input.length();
 
-        if (insertIndex >= textLen) {
+        if (insertIndex == -1 || insertIndex > textLen) {
             // if out of bond -> insert in the end
             // strcat(), memcpy() etc. work witc c_str()
-            strcat(text, input.c_str());
+            //strcat(text, input.c_str());
+            cout << "This index is out of bond\n";
         }
         else {
-            if (textLen + inputLen >= textSize) {
+            if (textLen + inputLen >= textSize - 1) {
                 textSize = textLen + inputLen + 1;
                 text = (char *)realloc(text, textSize * sizeof(char));
             }
             memcpy(&text[insertIndex], input.c_str(), inputLen);
+            cout << "Text inserted and replaced successfully\n";
+            textLen += inputLen;
         }
 
-        textLen += inputLen;
-
         saveState();
-        cout << "Text inserted and replaced successfully.\n";
     }
 };
 
