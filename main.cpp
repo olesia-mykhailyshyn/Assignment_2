@@ -350,6 +350,7 @@ public:
 
     void deleteText() {
         cout << "Deleting...\n";
+        cout << "Please count lines and columns from 0\n";
 
         cout << "Choose line:\n";
         string lineInput;
@@ -366,11 +367,12 @@ public:
         getline(cin, amountInput);
         int amount = stoi(amountInput);
 
-        int deleteIndex = findIndex(line,column);
+        int deleteIndex = findIndex(line, column);
 
-        if (deleteIndex + amount <= textLen) {
+        //if (deleteIndex + amount <= textLen) {   якщо виходимо за межі то видаляє перші символи
+        if (deleteIndex != -1 && deleteIndex + amount <= textLen) {
             //               to                        from                         number bytes
-            memmove(&text[deleteIndex], &text[deleteIndex + amount], (textLen - amount));
+            memmove(&text[deleteIndex], &text[deleteIndex + amount], textLen - deleteIndex - amount + 1);
             textLen -= amount;
             cout << "\nDeleting process was executed successfully\n";
         }
