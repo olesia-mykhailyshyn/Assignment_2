@@ -6,6 +6,34 @@
 
 using namespace std;
 
+class Cursor {
+private:
+    char cursor;
+    int cursorIndex;
+
+public:
+    Cursor() {
+        cursor = '|';
+        cursorIndex = 0;
+    }
+
+    int getCursor() {
+        return cursorIndex;
+    }
+
+    void setCursor(int index) {
+        cursorIndex = index+1;
+    }
+
+    void printCursor(char* text) {
+        text[cursorIndex] = cursor;
+    }
+
+    void removeCursor(char* text) {
+        text[cursorIndex] = ' ';
+    }
+};
+
 class Buffer {
 private:
     char* buffer;
@@ -49,6 +77,7 @@ private:
     stack<char*> stackUndo;
     stack<char*> stackRedo;
     Buffer buffer;
+    Cursor cursor;
 
 public:
     //constructor
@@ -83,7 +112,7 @@ public:
     }
 
     int findIndex(int line, int column) {
-        int index = -1;
+        int index = 0;
         int currentLine = 0;
         int currentColumn = 0;
 
@@ -94,7 +123,8 @@ public:
             if (text[index] == '\n') {
                 currentLine++;
                 currentColumn = 0;
-            } else {
+            }
+            else {
                 currentColumn++;
             }
             index++;
@@ -103,6 +133,7 @@ public:
     }
 
     void appendText() {
+        //cursor.removeCursor(text);
         cout << "Enter text to append:\n";
         int inputLen = 0;
         int inputSize = 10;
@@ -128,6 +159,7 @@ public:
         free(input);
         input = nullptr;
         saveState();
+        //cursor.setCursor(textLen);
     }
 
     void startNewLine () {
@@ -136,8 +168,8 @@ public:
             text = (char*)realloc(text, textSize);
         }
 
-        strcat(text, "\n");
-        textLen++;
+        text[textLen++] = '\n';
+        text[textLen] = '\0';
 
         cout << "New line is started\n";
         saveState();
@@ -201,11 +233,11 @@ public:
         else {
             cout << "Error opening file " << fileName << ". There is no such file in your PC.\n";
         }
-        saveState();
     }
 
     void printText() {
         cout << "Text:\n";
+        //cursor.printCursor(text);
         cout << text << endl;
     }
 
@@ -367,7 +399,6 @@ public:
         else {
             cout << "There are no operations to undo\n";
         }
-
     }
 
     void redo() {
@@ -389,6 +420,7 @@ public:
     }
 
     void cut() {
+        cout << "There are " << textLen << " symbols\n";
         int line, column, symbols;
         cout << "Enter line, column, and number of symbols separated by spaces:\n";
         cin >> line >> column >> symbols;
@@ -458,6 +490,7 @@ public:
         else {
             cout << "Paste operation is out of bounds\n";
         }
+        saveState();
     }
 
     void copy() {
@@ -487,7 +520,7 @@ public:
         cout << "Enter text to insert:\n";
         getline(cin, input);
 
-        int insertIndex = findIndex(line, column) + 1;
+        int insertIndex = findIndex(line, column); //+1
         int inputLen = input.length();
 
         if (insertIndex >= textLen) {
